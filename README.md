@@ -17,4 +17,4 @@ The reason why it's designed like this is to allows for testing that doesn't rel
 
 ## Experience
 
-Overall the project docs were very helpful with developing this project. It was definitely correct that Task 2 was most of the design work for this project. Having a good understanding as to why we split lab.h into three layers was the most important part for understanding how to proceed with the rest of the project.
+Overall the project docs were very helpful with developing this project. It was definitely correct that Task 2 was most of the design work for this project. Having a good understanding as to why we split lab.h into three layers was the most important part for understanding how to proceed with the rest of the project. One weird thing was that the create report github action wasn't showing up. I didn't edit the file at all but for some reason the spacing was messed up causing it to be hidden in the actions tab. I updated the spacing on line 3 and now it works.
