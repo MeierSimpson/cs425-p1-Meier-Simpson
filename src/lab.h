@@ -10,5 +10,7 @@
  */
 char* get_greeting(const char* restrict name);
 
+int smtp_client_run(int argc, char **argv);
+
 
 #endif // LAB_H

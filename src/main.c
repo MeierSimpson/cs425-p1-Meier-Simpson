@@ -8,14 +8,7 @@
 
 
 
-int main(void)
+int main(int argc, char **argv)
 {
-    char *greeting = get_greeting("World");
-    if (greeting) {
-        printf("%s\n", greeting);
-        free(greeting); // Free the allocated memory for the greeting
-    } else {
-        printf("Failed to create greeting.\n");
-    }
-    return 0;
+    return smtp_client_run(argc, argv);
 }
