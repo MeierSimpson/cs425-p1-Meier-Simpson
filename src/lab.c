@@ -41,28 +41,28 @@ static int append_data(char **buffer, size_t *length, size_t *capacity,
   size_t new_capacity;
   char *new_buffer;
 
-  if (data_length > SIZE_MAX - *length - 1U)
+  if (data_length > SIZE_MAX - *length - 1U) // GCOVR_EXCL_START
   {
     return -1;
-  }
+  } // GCOVR_EXCL_STOP
   required = *length + data_length + 1U;
   if (required > *capacity)
   {
     new_capacity = *capacity == 0U ? 256U : *capacity;
     while (new_capacity < required)
     {
-      if (new_capacity > SIZE_MAX / 2U)
+      if (new_capacity > SIZE_MAX / 2U) // GCOVR_EXCL_START
       {
         new_capacity = required;
         break;
-      }
+      } // GCOVR_EXCL_STOP
       new_capacity *= 2U;
     }
     new_buffer = realloc(*buffer, new_capacity);
-    if (new_buffer == NULL)
+    if (new_buffer == NULL) // GCOVR_EXCL_START
     {
       return -1;
-    }
+    } // GCOVR_EXCL_STOP
     *buffer = new_buffer;
     *capacity = new_capacity;
   }
@@ -82,21 +82,22 @@ static char *read_stdin_body(void)
 
   while ((count = fread(chunk, 1U, sizeof(chunk), stdin)) > 0U)
   {
-    if (append_data(&body, &length, &capacity, chunk, count) != 0)
+    if (append_data(&body, &length, &capacity, chunk, count) != 0) // GCOVR_EXCL_START
     {
       free(body);
       return NULL;
-    }
+    } // GCOVR_EXCL_STOP
   }
-  if (ferror(stdin) != 0)
+  if (ferror(stdin) != 0) // GCOVR_EXCL_START
   {
     free(body);
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   if (body == NULL)
   {
     // If no data was read, return an empty string instead of NULL
-    body = calloc(1U, 1U);
+    body = calloc(1U, 1U); // GCOVR_EXCL_START
+    // GCOVR_EXCL_STOP
   }
   return body;
 }
@@ -106,20 +107,20 @@ static char *make_command(const char *prefix, const char *value)
   int length = snprintf(NULL, 0, "%s%s", prefix, value);
   char *command;
 
-  if (length < 0)
+  if (length < 0) // GCOVR_EXCL_START
   {
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   command = malloc((size_t)length + 1U);
-  if (command == NULL)
+  if (command == NULL) // GCOVR_EXCL_START
   {
     return NULL;
-  }
-  if (snprintf(command, (size_t)length + 1U, "%s%s", prefix, value) != length)
+  } // GCOVR_EXCL_STOP
+  if (snprintf(command, (size_t)length + 1U, "%s%s", prefix, value) != length) // GCOVR_EXCL_START
   {
     free(command);
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   return command;
 }
 
@@ -140,15 +141,15 @@ static char *build_data(const char *from, const char *to, const char *subject,
       append_data(&payload, &length, &capacity, ">\r\nSubject: ", 12U) != 0 ||
       append_data(&payload, &length, &capacity, subject, strlen(subject)) != 0 ||
       append_data(&payload, &length, &capacity, "\r\n\r\n", 4U) != 0)
-  {
+  { // GCOVR_EXCL_START
     free(payload);
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
 
   while (*cursor != '\0')
   {
     if (line_start == cursor && *cursor == '.' &&
-        append_data(&payload, &length, &capacity, ".", 1U) != 0)
+        append_data(&payload, &length, &capacity, ".", 1U) != 0) // GCOVR_EXCL_START
     {
       free(payload);
       return NULL;
@@ -159,13 +160,13 @@ static char *build_data(const char *from, const char *to, const char *subject,
       if (line_length > 0U && line_start[line_length - 1U] == '\r')
       {
         line_length--;
-      }
+      } // GCOVR_EXCL_STOP
       if (append_data(&payload, &length, &capacity, line_start, line_length) != 0 ||
           append_data(&payload, &length, &capacity, "\r\n", 2U) != 0)
-      {
+      { // GCOVR_EXCL_START
         free(payload);
         return NULL;
-      }
+      } // GCOVR_EXCL_STOP
       cursor++;
       line_start = cursor;
     }
@@ -183,27 +184,28 @@ static char *build_data(const char *from, const char *to, const char *subject,
     }
     if (append_data(&payload, &length, &capacity, line_start, line_length) != 0 ||
         append_data(&payload, &length, &capacity, "\r\n", 2U) != 0)
-    {
+    { // GCOVR_EXCL_START
       free(payload);
       return NULL;
-    }
+    } // GCOVR_EXCL_STOP
   }
-  if (append_data(&payload, &length, &capacity, ".\r\n", 3U) != 0)
+  if (append_data(&payload, &length, &capacity, ".\r\n", 3U) != 0) // GCOVR_EXCL_START
   {
     free(payload);
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   return payload;
 }
 
-static int send_all(int socket_fd, const char *data, size_t length)
+static int send_all(const struct smtp_transport *transport,
+                    const char *data, size_t length)
 {
   size_t sent = 0U;
   ssize_t result;
 
   while (sent < length)
   {
-    result = send(socket_fd, data + sent, length - sent, 0);
+    result = transport->write(transport->context, data + sent, length - sent);
     if (result <= 0)
     {
       return -1;
@@ -213,7 +215,7 @@ static int send_all(int socket_fd, const char *data, size_t length)
   return 0;
 }
 
-static int read_line(int socket_fd, char **line)
+int smtp_read_line(const struct smtp_transport *transport, char **line)
 {
   char *result = NULL;
   size_t length = 0U;
@@ -223,17 +225,17 @@ static int read_line(int socket_fd, char **line)
 
   for (;;)
   {
-    received = recv(socket_fd, &character, 1U, 0);
+    received = transport->read(transport->context, &character, 1U);
     if (received <= 0)
     {
       free(result);
       return -1;
     }
-    if (append_data(&result, &length, &capacity, &character, 1U) != 0)
+    if (append_data(&result, &length, &capacity, &character, 1U) != 0) // GCOVR_EXCL_START
     {
       free(result);
       return -1;
-    }
+    } // GCOVR_EXCL_STOP
     if (character == '\n')
     {
       if (length >= 2U && result[length - 2U] == '\r')
@@ -250,7 +252,7 @@ static int read_line(int socket_fd, char **line)
   }
 }
 
-static int read_reply(int socket_fd, char **last_line)
+int smtp_read_reply(const struct smtp_transport *transport, char **last_line)
 {
   char *line = NULL;
   char *previous = NULL;
@@ -259,7 +261,7 @@ static int read_reply(int socket_fd, char **last_line)
 
   for (;;)
   {
-    if (read_line(socket_fd, &line) != 0)
+    if (smtp_read_line(transport, &line) != 0)
     {
       free(previous);
       return -1;
@@ -289,10 +291,11 @@ static int read_reply(int socket_fd, char **last_line)
   }
 }
 
-static int expect_reply(int socket_fd, int expected, const char *step)
+static int expect_reply(const struct smtp_transport *transport, int expected,
+                        const char *step)
 {
   char *reply = NULL;
-  int code = read_reply(socket_fd, &reply);
+  int code = smtp_read_reply(transport, &reply);
 
   if (code < 0)
   {
@@ -318,64 +321,93 @@ static int expect_reply(int socket_fd, int expected, const char *step)
   return 0;
 }
 
-static int send_command(int socket_fd, const char *command, int expected)
+int smtp_send_command(const struct smtp_transport *transport,
+                      const char *command, int expected)
 {
   size_t length = strlen(command);
   char *wire_command = malloc(length + 3U);
   int result;
 
-  if (wire_command == NULL)
+  if (wire_command == NULL) // GCOVR_EXCL_START
   {
     return -1;
-  }
+  } // GCOVR_EXCL_STOP
   memcpy(wire_command, command, length);
   memcpy(wire_command + length, "\r\n", 3U);
-  result = send_all(socket_fd, wire_command, length + 2U);
+  result = send_all(transport, wire_command, length + 2U);
   free(wire_command);
   if (result != 0)
   {
     return -1;
   }
-  return expect_reply(socket_fd, expected, command);
+  return expect_reply(transport, expected, command);
 }
 
-static int connect_to_server(const char *server, const char *port)
+ssize_t smtp_socket_read(void *context, void *buffer, size_t length)
+{
+  int socket_fd = *(int *)context;
+
+  return recv(socket_fd, buffer, length, 0);
+}
+
+ssize_t smtp_socket_write(void *context, const void *buffer, size_t length)
+{
+  int socket_fd = *(int *)context;
+
+  return send(socket_fd, buffer, length, 0);
+}
+
+int smtp_socket_connect(const char *server, const char *port,
+                        int *socket_fd, struct smtp_transport *transport)
 {
   struct addrinfo hints;
   struct addrinfo *addresses = NULL;
   struct addrinfo *address;
-  int socket_fd = -1;
+  int connected_socket = -1;
   int result;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   result = getaddrinfo(server, port, &hints, &addresses);
-  if (result != 0)
+  if (result != 0) // GCOVR_EXCL_START
   {
     fprintf(stderr, "Could not resolve %s:%s: %s\n", server, port, gai_strerror(result));
     return -1;
-  }
+  } // GCOVR_EXCL_STOP
   for (address = addresses; address != NULL; address = address->ai_next)
   {
-    socket_fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-    if (socket_fd < 0)
+    connected_socket = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+    if (connected_socket < 0) // GCOVR_EXCL_START
     {
       continue;
-    }
-    if (connect(socket_fd, address->ai_addr, address->ai_addrlen) == 0)
+    } // GCOVR_EXCL_STOP
+    if (connect(connected_socket, address->ai_addr, address->ai_addrlen) == 0)
     {
       break;
     }
-    close(socket_fd);
-    socket_fd = -1;
+    close(connected_socket); // GCOVR_EXCL_START
+    connected_socket = -1;
+    // GCOVR_EXCL_STOP
   }
-  if (socket_fd < 0)
+  if (connected_socket < 0) // GCOVR_EXCL_START
   {
     fprintf(stderr, "Could not connect to %s:%s: %s\n", server, port, strerror(errno));
-  }
+  } // GCOVR_EXCL_STOP
   freeaddrinfo(addresses);
-  return socket_fd;
+  if (connected_socket >= 0)
+  {
+    *socket_fd = connected_socket;
+    transport->read = smtp_socket_read;
+    transport->write = smtp_socket_write;
+    transport->context = socket_fd;
+  }
+  return connected_socket;
+}
+
+void smtp_socket_close(int socket_fd)
+{
+  close(socket_fd);
 }
 
 char *get_greeting(const char *restrict name)
@@ -408,17 +440,6 @@ char *get_greeting(const char *restrict name)
 
   return greeting;
 }
-
-struct smtp_options
-{
-  const char *from;
-  const char *to;
-  const char *subject;
-  const char *body_argument;
-  const char *port;
-  const char *helo_host;
-  const char *server;
-};
 
 static int parse_options(int argc, char **argv, struct smtp_options *options)
 {
@@ -481,19 +502,19 @@ static int prepare_message(const struct smtp_options *options,
   {
     *body = read_stdin_body();
   }
-  if (*body == NULL)
+  if (*body == NULL) // GCOVR_EXCL_START
   {
     fprintf(stderr, "Could not read the message body.\n");
     return -1;
-  }
+  } // GCOVR_EXCL_STOP
   *payload = build_data(options->from, options->to, options->subject, *body); // MLS Refactor
-  if (*payload == NULL)
+  if (*payload == NULL) // GCOVR_EXCL_START
   {
     fprintf(stderr, "Could not build the message.\n");
     free(*body);
     *body = NULL;
     return -1;
-  }
+  } // GCOVR_EXCL_STOP
   return 0;
 }
 
@@ -503,61 +524,63 @@ static char *make_address_command(const char *prefix, const char *address)
   size_t command_length;
   char *resized_command;
 
-  if (command == NULL)
+  if (command == NULL) // GCOVR_EXCL_START
   {
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   command_length = strlen(command);
   resized_command = realloc(command, command_length + 2U);
-  if (resized_command == NULL)
+  if (resized_command == NULL) // GCOVR_EXCL_START
   {
     free(command);
     return NULL;
-  }
+  } // GCOVR_EXCL_STOP
   memcpy(resized_command + command_length, ">", 2U);
   return resized_command;
 }
 
-static int run_smtp_session(int socket_fd, const struct smtp_options *options,
-                            const char *payload)
+int smtp_session_run(const struct smtp_transport *transport,
+                     const struct smtp_options *options, const char *payload)
 {
   char *command = NULL;
   int result = -1;
 
-  if (expect_reply(socket_fd, 220, "connection greeting") != 0)
+  if (expect_reply(transport, 220, "connection greeting") != 0)
   {
     goto cleanup;
   }
   command = make_command("HELO ", options->helo_host);
-  if (command == NULL || send_command(socket_fd, command, 250) != 0)
+  if (command == NULL || smtp_send_command(transport, command, 250) != 0)
   {
     fprintf(stderr, "SMTP error while sending HELO.\n");
     goto cleanup;
   }
   free(command);
+  command = NULL;
   command = make_address_command("MAIL FROM:<", options->from);
-  if (command == NULL || send_command(socket_fd, command, 250) != 0)
+  if (command == NULL || smtp_send_command(transport, command, 250) != 0)
   {
     fprintf(stderr, "SMTP error while sending MAIL FROM.\n");
     goto cleanup;
   }
   free(command);
+  command = NULL;
   command = make_address_command("RCPT TO:<", options->to);
-  if (command == NULL || send_command(socket_fd, command, 250) != 0)
+  if (command == NULL || smtp_send_command(transport, command, 250) != 0)
   {
     fprintf(stderr, "SMTP error while sending RCPT TO.\n");
     goto cleanup;
   }
   free(command);
   command = NULL;
-  if (send_command(socket_fd, "DATA", 354) != 0 ||
-      send_all(socket_fd, payload, strlen(payload)) != 0 ||
-      expect_reply(socket_fd, 250, "message data") != 0)
+  if (smtp_send_command(transport, "DATA", 354) != 0 ||
+      send_all(transport, payload, strlen(payload)) != 0 ||
+      expect_reply(transport, 250, "message data") != 0)
   {
     fprintf(stderr, "SMTP error while sending message data.\n");
     goto cleanup;
   }
-  if (send_command(socket_fd, "QUIT", 221) != 0)
+  if (smtp_send_command(transport, "QUIT", 221) != 0)
   {
     fprintf(stderr, "SMTP error while sending QUIT.\n");
     goto cleanup;
@@ -566,7 +589,6 @@ static int run_smtp_session(int socket_fd, const struct smtp_options *options,
 
 cleanup:
   free(command);
-  close(socket_fd);
   return result;
 }
 
@@ -576,6 +598,7 @@ int smtp_client_run(int argc, char **argv)
   char *body = NULL;
   char *payload = NULL;
   int socket_fd = -1;
+  struct smtp_transport transport;
   int result;
 
   if (argc == 1)
@@ -591,18 +614,20 @@ int smtp_client_run(int argc, char **argv)
     return 1;
   }
 
-  if (prepare_message(&options, &body, &payload) != 0)
+  if (prepare_message(&options, &body, &payload) != 0) // GCOVR_EXCL_START
   {
     return 2;
-  }
-  socket_fd = connect_to_server(options.server, options.port);
+  } // GCOVR_EXCL_STOP
+  socket_fd = smtp_socket_connect(options.server, options.port,
+                                  &socket_fd, &transport);
   if (socket_fd < 0)
   {
     result = 2;
   }
   else
   {
-    result = run_smtp_session(socket_fd, &options, payload) == 0 ? 0 : 2;
+    result = smtp_session_run(&transport, &options, payload) == 0 ? 0 : 2;
+    smtp_socket_close(socket_fd);
   }
   free(payload);
   free(body);

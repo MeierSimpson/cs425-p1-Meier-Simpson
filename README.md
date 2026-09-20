@@ -1,22 +1,20 @@
 # Project X
 
-- Name: John Doe
-- Email: johndoe@u.boisestate.edu
-- Class: CS123-001
+- Name: Meier Simpson
+- Email: meiersimpson@u.boisestate.edu
+- Class: CS425-001
 
-## Known Bugs or Issues
+## Usage:
 
-TODO: Are there any known issues?
+AWS test default: ./scripts/test-aws-client.py --subject "hello" --body "Test message"
+AWS test override: ./scripts/test-aws-client.py --subject "hello" --body "Test message"
+
+Local test: ./scripts/test-client.py
+
+## Design
+The three layer split in task two creates a protocol helpers layer, SMTP session layer and socket transport layer. 
+The reason why it's designed like this is to allows for testing that doesn't rely on a live server.
 
 ## Experience
 
-TODO: Describe your experience with the project (struggles, breakthroughs, etc.).
-
-## Analysis
-
-TODO: Provide your analysis of the results. If the assignment does not require
-analysis, you can remove this section.
-
-Here is an example of how to include a plot in your README:
-
-![Example Image](scripts/example_plot.png)
+Overall the project docs were very helpful with developing this project. It was definitely correct that Task 2 was most of the design work for this project. Having a good understanding as to why we split lab.h into three layers was the most important part for understanding how to proceed with the rest of the project.
