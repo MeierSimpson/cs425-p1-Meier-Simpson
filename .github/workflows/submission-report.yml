@@ -1,7 +1,7 @@
 name: Create Submission Report Via GitHub Action
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 permissions:
   contents: write
 
